@@ -1,0 +1,198 @@
+<script id="result-success-template" type="text/x-handlebars-template">
+    <article class="message is-primary">
+        <div class="message-header">
+            <p>{{action}} Operation Succeeded</p>
+            <button class="delete" aria-label="Delete"></button>
+        </div>
+        <div class="message-body">
+            {{#hasOut}}
+            <div class="buttons is-right">
+                <a target="_blank" href="{{out}}" class="button is-link is-small">output.bin</a>
+            </div>
+            {{/hasOut}}
+            <pre>{{msg}}</pre>
+        </div>
+    </article>
+</script>
+
+<script id="result-failed-template" type="text/x-handlebars-template">
+    <article class="message is-danger">
+        <div class="message-header">
+            <p>{{action}} Operation Failed : {{status}}</p>
+            <button class="delete" aria-label="delete"></button>
+        </div>
+        <div class="message-body">
+            <pre>{{msg}}</pre>
+        </div>
+    </article>
+</script>
+
+<script type="text/javascript">
+
+    let successTemplate = Handlebars.compile(
+        $("script#result-success-template").html()
+    );
+
+    let failedTemplate = Handlebars.compile(
+        $("script#result-failed-template").html()
+    );
+
+    function getFrendlyActionName() {
+        let action = $('input[name="action"]:checked').val();
+        return toTitleCase(action);
+    }
+
+    function onFormSuccess(resp) {
+        let target = $('div#output');
+        console.log(resp);
+        let elem = $(successTemplate({
+            "action": getFrendlyActionName(),
+            "msg": resp.msg,
+            "out": resp.out,
+            "hasOut": resp.out !== null,
+        }));
+
+        elem.children('div.message-header').children('button.delete').click(e => {
+            let target = $(e.target).parents("article.message.is-primary");
+            target.remove();
+        });
+
+        target.prepend(elem);
+    }
+
+    function onFormError(xhr, status, error) {
+        let target = $('div#output');
+        let elem = $(failedTemplate({
+            "action": getFrendlyActionName(),
+            "msg": xhr.responseText,
+            "status": xhr.status
+        }));
+
+        elem.children("div.message-header").children("button.delete").click(e => {
+            let target = $(e.target).parents("article.message.is-danger");
+            target.remove();
+        });
+
+        target.prepend(elem);
+    }
+
+    function updateFormForAction(action) {
+
+        // Hide parts of the form that are not appropriate for the action.
+        $('[data-action-visibility]').each((i, elem) => {
+            let flags = $(elem).attr('data-action-visibility').split(',');
+            if (flags.includes(action) === false)
+                $(elem).hide(300);
+            else
+                $(elem).show(300);
+        })
+    }
+
+    $(() => {
+        // Set defaulf form action
+        updateFormForAction("probe")
+        $('input[name=action]').change(e => {
+            let action = $(e.target).val();
+            updateFormForAction(action)
+        })
+    });
+
+</script>
+
+<div class="container is-fluid">
+    <h1 class="title">FlashROM Utility</h1>
+    <p class="subtitle">detect, read, write, verify and erase flash chips</p>
+    <div class="block">
+        Flashtool is a SPI flash utility that can be used to read and write binary
+        images to and from a SPI flash chip.
+    </div>
+    <form action="/api/flashrom" method="POST" enctype="multipart/form-data">
+        <div class="box">
+            <div class="field">
+                <label class="label">Programmer Name</label>
+                <div class="control">
+                    <input
+                        class="input"
+                        type="text"
+                        name="programmer"
+                        placeholder="<name>[:parameter[,parameter[,parameter]]]" />
+                </div>
+                <p class="help">Specify the programmer device you would like to use. Example: dummy:emulate=M25P10.RES</p>
+            </div>
+            <div class="field">
+                <label class="label">Action</label>
+                <div class="control">
+                    <div class="radios">
+                        <label
+                            class="radio tooltip is-tooltip-bottom"
+                            data-tooltip="Probe for flash chips.">
+                            <input type="radio" name="action" value="probe" checked /> Probe
+                        </label>
+                        <label
+                            class="radio tooltip is-tooltip-bottom"
+                            data-tooltip="Erase the flash ROM chip.">
+                            <input type="radio" name="action" value="erase" /> Erase
+                        </label>
+                        <label
+                            class="radio tooltip is-tooltip-bottom is-tooltip-multiline"
+                            data-tooltip="Read flash ROM contents and save them into the given <file>. If the file already exists, it will be overwritten.">
+                            <input type="radio" name="action" value="read" /> Read
+                        </label>
+                        <label
+                            class="radio tooltip is-tooltip-bottom is-tooltip-multiline"
+                            data-tooltip="Write <file> into flash ROM. If - is provided instead, contents will be read from stdin. This will first automatically erase the chip, then write to it. In the process the chip is also read several times. First an in-memory backup is made for disaster recovery and to be able to skip regions that are already equal to the image file. This copy is updated along with the write operation. In case of erase errors it is even re-read completely. After writing has finished and if verification is enabled, the whole flash chip is read out and compared with the input image.">
+                            <input type="radio" name="action" value="write" /> Write
+                        </label>
+                        <label
+                            class="radio tooltip is-tooltip-bottom is-tooltip-multiline"
+                            data-tooltip="Verify the flash ROM contents against the given <file>. If - is provided instead, contents will be written to the stdout.">
+                            <input type="radio" name="action" value="verify" /> Verify
+                        </label>
+                    </div>
+                </div>
+                <p class="help">Select the action you would like to proform.</p>
+            </div>
+            <div class="field" data-action-visibility="write,verify" data-action-visibility="verify">
+                <label class="label">File</label>
+                <div class="control">
+                    <div class="file has-name">
+                        <label class="file-label">
+                            <input class="file-input" type="file" name="file-upload" />
+                            <span class="file-cta">
+                                <span class="file-icon"><i class="fas fa-upload"></i></span>
+                                <span class="file-label"> Choose a file… </span>
+                            </span>
+                            <span class="file-name"> Please select a file</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">Flags</label>
+                <div class="control">
+                    <div class="checkboxes">
+                        <label
+                            class="checkbox tooltip is-tooltip-bottom"
+                            data-tooltip="Force the action.">
+                            <input type="checkbox" name="force" />
+                            Force
+                        </label>
+                        <label
+                            class="checkbox tooltip is-tooltip-bottom"
+                            data-tooltip="More Verbose Output.">
+                            <input type="checkbox" name="very-very-verbose" />
+                            Verbose
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="buttons is-right">
+                <button type="reset" class="button">Reset Form</button>
+                <button type="submit" class="button is-primary is-dark">Submit</button>
+            </div>
+        </div>
+    </form>
+</div>
+<br>
+<div id="output" class="container is-fluid">
+</div>
