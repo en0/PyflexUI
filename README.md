@@ -37,6 +37,14 @@ Optionally, run unittests on a file-watch.
 ptw
 ```
 
+If you receive a 'ModuleNotFoundError: No module named 'pyflex'', try exporting
+the python path and running pytest/ptw again.
+
+```bash
+export PYTHONPATH=$PWD
+ptw
+```
+
 ## Developer Guide
 
 The PyFlexUI is split into 3 different layers.
