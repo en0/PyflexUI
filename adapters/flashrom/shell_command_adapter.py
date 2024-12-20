@@ -113,7 +113,7 @@ class FlashROMShellCommandAdapter(FlashROMAdapter):
             file_name = f"{uuid()}.bin"
             ret.extend([
                 "-p", opts.programmer,
-                "-r", f'"{str(self._output_path / file_name)}"',
+                "-r", str(self._output_path / file_name),
             ])
 
         # Global Flags
